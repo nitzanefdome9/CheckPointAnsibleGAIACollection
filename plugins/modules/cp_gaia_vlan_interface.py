@@ -135,7 +135,7 @@ def main():
     )
     module = AnsibleModule(argument_spec=fields, supports_check_mode=True)
     api_call_object = 'vlan-interface'
-    ignore = ["status"]
+    ignore = ["x"]
     keys = ["name"]
 
     res = set_api_call(module, api_call_object, ignore, keys)
