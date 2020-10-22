@@ -32,6 +32,7 @@ __metaclass__ = type
 
 import time
 
+import ansible.errors
 from ansible.module_utils.connection import Connection
 
 checkpoint_argument_spec_for_objects = dict(
@@ -161,6 +162,27 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
         "changed": changed
     }
 
+def set_api_call(module, api_call_object, ignore, keys):
+    changed = False
+    modules_params_original = module.params
+    module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
+    module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
+    module.params = module_params_show
+    current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
+    shared_items = {key: module_params_input[key] for key in module_params_input if key in current and str(module_params_input[key]) == str(current[key])}
+
+    # Run the command:
+    if len(shared_items) < len(module_params_input):
+        module.params = modules_params_original
+        current = api_call(module=module, api_call_object="set-{0}".format(api_call_object))
+        changed = True
+
+    module.params = module_params_show
+
+    return {
+        api_call_object.replace('-', '_'): current,
+        "changed": changed
+    }
 
 def facts_api_call(module, api_call_object, keys):
     module_key_params = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
