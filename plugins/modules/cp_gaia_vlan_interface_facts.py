@@ -64,7 +64,8 @@ from ansible_collections.check_point.gaia.plugins.module_utils.checkpoint import
 def main():
     # arguments for the module:
     fields = dict(
-        name=dict(required=False, type="str")
+        name=dict(required=False, type="str"),
+        parent=dict(requierd=False, type="str")
     )
     module = AnsibleModule(argument_spec=fields, supports_check_mode=True)
     api_call_object = "vlan-interface"

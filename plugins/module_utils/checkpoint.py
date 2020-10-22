@@ -33,6 +33,7 @@ __metaclass__ = type
 import time
 
 import ansible.errors
+from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.connection import Connection
 
 checkpoint_argument_spec_for_objects = dict(
@@ -164,11 +165,15 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
 
 def set_api_call(module, api_call_object, ignore, keys):
     changed = False
+    interface_name = module.params["name"]
     modules_params_original = module.params
     module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
-    module.params = module_params_show
-    current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
+    if not is_interface_exsits(module, interface_name):
+        current = add_api_call(module=module, api_call_object=api_call_object, keys=keys)
+    else:
+        module.params = module_params_show
+        current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
     shared_items = {key: module_params_input[key] for key in module_params_input if key in current and str(module_params_input[key]) == str(current[key])}
 
     # Run the command:
@@ -178,16 +183,43 @@ def set_api_call(module, api_call_object, ignore, keys):
         changed = True
 
     module.params = module_params_show
+    test = is_interface_exsits(module, interface_name)
 
     return {
         api_call_object.replace('-', '_'): current,
-        "changed": changed
+        "changed": changed,
+        "test": test
     }
+
+
+def add_api_call(module, api_call_object, keys):
+    modules_params_original = module.params
+    parent_and_id = module.params["name"].split(".")
+    module.params["parent"] = parent_and_id[0]
+    module.params["id"] = parent_and_id[1]
+    del module.params["name"]
+    res = api_call(module=module, api_call_object="add-{0}".format(api_call_object))
+    module.params = modules_params_original
+    return res
+
+
+def get_all_interfaces(module):
+    modules_params_original = module.params
+    module.params = {}
+    res = api_call(module=module, api_call_object="show-interfaces")["objects"]
+    module.params = modules_params_original
+    return res
+
+def is_interface_exsits(module, name):
+    interfaces_list = get_all_interfaces(module=module)
+    if not any(d["name"] == name for d in interfaces_list):
+        return False
+    return True
 
 def facts_api_call(module, api_call_object, keys):
     module_key_params = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
 
-    if len(module_key_params) > 0:
+    if "name" in module_key_params:
         res = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
     else:
         res = api_call(module=module, api_call_object="show-{0}s".format(api_call_object))
