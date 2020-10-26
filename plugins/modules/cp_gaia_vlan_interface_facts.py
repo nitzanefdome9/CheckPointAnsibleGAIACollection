@@ -43,6 +43,10 @@ options:
 EXAMPLES = """
 - name: Show vlan interfaces
   cp_gaia_vlan_interfaces_facts:
+  
+- name: Show vlan interfaces by specifying parent
+  cp_gaia_vlan_interfaces_facts:
+    parent: eth0
 
 - name: Show vlan interface by specifying it name
   cp_gaia_vlan_interfaces_facts:

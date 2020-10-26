@@ -26,23 +26,15 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
                     'supported_by': 'community'}
 
 DOCUMENTATION = """
-module: cp_gaia_physical_interface
-author: Yuval Feiger (@chkp-yuvalfe)
+module: cp_gaia_vlan_interface
+author: Nitzan Efrati (@nitzanefdome9)
 description:
-- Set Physical interface
-short_description: Set Physical interface
+- Add, set or delete Vlan interface
+short_description: Add, set or delete Vlan interface
 version_added: '2.9'
 options:
-  auto_negotiation:
-    description: Activating Auto-Negotiation will skip the speed and duplex configuration
-    required: false
-    type: bool
   comments:
     description: interface Comments.
-    required: false
-    type: str
-  duplex:
-    description: Duplex for the interface. Duplex is not relevant when 'auto-negotiation' is enabled
     required: false
     type: str
   enabled:
@@ -69,14 +61,6 @@ options:
     description: Interface IPv6 address mask length.
     required: false
     type: int
-  mac_addr:
-    description: Configure hardware address.
-    required: false
-    type: str
-  monitor_mode:
-    description: set monitor mode for the interface off/on.
-    required: false
-    type: bool
   mtu:
     description: interface mtu.
     required: false
@@ -85,34 +69,40 @@ options:
     description: interface name.
     required: true
     type: str
-  rx_ringsize:
-    description: Set receive buffer size for interface.
-    required: false
-    type: int
-  speed:
-    description: Interface link speed. Speed is not relevant when 'auto-negotiation' is enabled
+  state:
+    description:
+      - if state=present and interface not exists, interface will be created
+      - if state=present and interface exists with required changes, interface will be updated
+      - if state=absent, interface will be removed
     required: false
     type: str
-  tx_ringsize:
-    description: Set transmit buffer size for interfaces.
-    required: false
-    type: int
+    default: present
+    choices: [present, absent]
 
 """
 
 EXAMPLES = """
-- name: Set comment field of a physical interface
-  cp_gaia_physical_interface:
-    comments: eth0 interface
-    enabled: true
-    name: eth0
+- name: Create a vlan interface
+  cp_gaia_vlan_interface:
+    name: eth0.2
+    
+- name: Set vlan interface ipv4 address and mask length:
+  cp_gaia_vlan_interface:
+    name: eth0.2
+    ipv4_address: 1.1.1.1
+    ipv4_mask_length: 24
+    
+- name: Delete vlan interface:
+  cp_gaia_vlan_interface:
+    name: eth0.2
+    state: absent
 
 """
 
 RETURN = """
-physical_interface:
-  description: The updated interface details.
-  returned: always.
+vlan_interface:
+  description: The current/updated/added interface details.
+  returned: state == present.
   type: dict
 """
 
