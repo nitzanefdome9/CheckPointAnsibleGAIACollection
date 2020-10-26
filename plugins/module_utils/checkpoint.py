@@ -36,6 +36,9 @@ import ansible.errors
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.connection import Connection
 
+import pydevd_pycharm
+
+
 checkpoint_argument_spec_for_objects = dict(
     auto_publish_session=dict(type='bool'),
     wait_for_task=dict(type='bool', default=True),
@@ -163,7 +166,9 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
         "changed": changed
     }
 
+
 def set_api_call(module, api_call_object, ignore, keys):
+    # pydevd_pycharm.settrace('172.20.38.88', port=54654, stdoutToServer=True, stderrToServer=True)
     changed = False
     interface_name = module.params["name"]
     modules_params_original = module.params
@@ -216,10 +221,11 @@ def is_interface_exsits(module, name):
         return False
     return True
 
+
 def facts_api_call(module, api_call_object, keys):
     module_key_params = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
 
-    if "name" in module_key_params:
+    if len(module_key_params) > 0:
         res = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
     else:
         res = api_call(module=module, api_call_object="show-{0}s".format(api_call_object))
