@@ -167,13 +167,19 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
 
 def set_api_call(module, api_call_object, keys, add_params):
     changed = False
+    state = module.params["state"]
+    module.params.pop("state")
+    if state == "absent":
+        api_call(module=module, api_call_object="delete-{0}".format(api_call_object))
+        return {}
     modules_params_original = module.params
     module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
     module.params = module_params_show
-    try:
+    test2 = is_object_exists(module=module, api_call_object=api_call_object)
+    if test2:
         current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
-    except:
+    else:
         module.params = modules_params_original
         current = add_api_call(module=module, api_call_object=api_call_object, keys=keys, add_params=add_params)
     shared_items = {key: module_params_input[key] for key in module_params_input if key in current and str(module_params_input[key]) == str(current[key])}
@@ -185,14 +191,26 @@ def set_api_call(module, api_call_object, keys, add_params):
         changed = True
 
     module.params = module_params_show
-    test = {"test": "test"}
+    test = {"parent": "eth01"}
     test.update(add_params)
 
     return {
         api_call_object.replace('-', '_'): current,
         "changed": changed,
-        "test": test
+        "test": test2
     }
+
+
+def is_change_requierd(module, api_call_object, keys):
+    modules_params_original = module.params
+    module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
+    module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
+    module.params = module_params_show
+    current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
+    shared_items = {key: module_params_input[key] for key in module_params_input if
+                    key in current and str(module_params_input[key]) == str(current[key])}
+    module.params = modules_params_original
+    return len(shared_items) < len(module_params_input)
 
 
 def add_api_call(module, api_call_object, keys, add_params):
@@ -226,3 +244,11 @@ def api_call(module, api_call_object):
         module.fail_json(msg=parse_fail_message(code, response))
 
     return response
+
+
+def is_object_exists(module, api_call_object):
+    payload = get_payload_from_parameters(module.params)
+    connection = Connection(module._socket_path)
+    version = get_version(module)
+    code, response = send_request(connection, version, "show-{0}".format(api_call_object), payload)
+    return code == 200

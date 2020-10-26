@@ -131,7 +131,8 @@ def main():
         comments=dict(required=False, type="str"),
         mtu=dict(required=False, type="int"),
         ipv4_address=dict(required=False, type="str"),
-        ipv6_mask_length=dict(required=False, type="int")
+        ipv6_mask_length=dict(required=False, type="int"),
+        state=dict(requierd=False, type="str", default="present", choices=["present", "absent"])
     )
     module = AnsibleModule(argument_spec=fields, supports_check_mode=True)
     api_call_object = 'vlan-interface'
