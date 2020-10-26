@@ -135,10 +135,11 @@ def main():
     )
     module = AnsibleModule(argument_spec=fields, supports_check_mode=True)
     api_call_object = 'vlan-interface'
-    ignore = ["x"]
     keys = ["name"]
+    parent_and_id = module.params["name"].split(".")
+    add_params = {"parent": parent_and_id[0], "id": parent_and_id[1]}
 
-    res = set_api_call(module, api_call_object, ignore, keys)
+    res = set_api_call(module, api_call_object, keys, add_params)
     module.exit_json(**res)
 
 

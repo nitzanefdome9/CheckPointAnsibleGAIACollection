@@ -36,8 +36,6 @@ import ansible.errors
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.connection import Connection
 
-import pydevd_pycharm
-
 
 checkpoint_argument_spec_for_objects = dict(
     auto_publish_session=dict(type='bool'),
@@ -167,18 +165,17 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
     }
 
 
-def set_api_call(module, api_call_object, ignore, keys):
-    # pydevd_pycharm.settrace('172.20.38.88', port=54654, stdoutToServer=True, stderrToServer=True)
+def set_api_call(module, api_call_object, keys, add_params):
     changed = False
-    interface_name = module.params["name"]
     modules_params_original = module.params
     module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
-    if not is_interface_exsits(module, interface_name):
-        current = add_api_call(module=module, api_call_object=api_call_object, keys=keys)
-    else:
-        module.params = module_params_show
+    module.params = module_params_show
+    try:
         current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
+    except:
+        module.params = modules_params_original
+        current = add_api_call(module=module, api_call_object=api_call_object, keys=keys, add_params=add_params)
     shared_items = {key: module_params_input[key] for key in module_params_input if key in current and str(module_params_input[key]) == str(current[key])}
 
     # Run the command:
@@ -188,7 +185,8 @@ def set_api_call(module, api_call_object, ignore, keys):
         changed = True
 
     module.params = module_params_show
-    test = is_interface_exsits(module, interface_name)
+    test = {"test": "test"}
+    test.update(add_params)
 
     return {
         api_call_object.replace('-', '_'): current,
@@ -197,29 +195,13 @@ def set_api_call(module, api_call_object, ignore, keys):
     }
 
 
-def add_api_call(module, api_call_object, keys):
+def add_api_call(module, api_call_object, keys, add_params):
     modules_params_original = module.params
-    parent_and_id = module.params["name"].split(".")
-    module.params["parent"] = parent_and_id[0]
-    module.params["id"] = parent_and_id[1]
-    del module.params["name"]
+    [module.params.pop(key) for key in keys if key not in add_params]
+    module.params.update(add_params)
     res = api_call(module=module, api_call_object="add-{0}".format(api_call_object))
     module.params = modules_params_original
     return res
-
-
-def get_all_interfaces(module):
-    modules_params_original = module.params
-    module.params = {}
-    res = api_call(module=module, api_call_object="show-interfaces")["objects"]
-    module.params = modules_params_original
-    return res
-
-def is_interface_exsits(module, name):
-    interfaces_list = get_all_interfaces(module=module)
-    if not any(d["name"] == name for d in interfaces_list):
-        return False
-    return True
 
 
 def facts_api_call(module, api_call_object, keys):
