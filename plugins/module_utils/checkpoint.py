@@ -167,16 +167,12 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
 
 def set_api_call(module, api_call_object, keys, add_params):
     changed = False
-    state = module.params["state"]
-    module.params.pop("state")
-    if state == "absent":
-        api_call(module=module, api_call_object="delete-{0}".format(api_call_object))
-        return {}
-    modules_params_original = module.params
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
-    test2 = is_object_exists(module=module, api_call_object=api_call_object, keys=keys)
-    if not test2:
-        module.params = modules_params_original
+    if is_delete_requested(module=module):
+        api_call(module=module, api_call_object="delete-{0}".format(api_call_object))
+        module.params = module_params_show
+        return {}
+    if not is_object_exists(module=module, api_call_object=api_call_object, keys=keys):
         current = add_api_call(module=module, api_call_object=api_call_object, keys=keys, add_params=add_params)
     elif is_change_required(module=module, api_call_object=api_call_object, keys=keys):
         current = api_call(module=module, api_call_object="set-{0}".format(api_call_object))
@@ -186,14 +182,19 @@ def set_api_call(module, api_call_object, keys, add_params):
         current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
 
     module.params = module_params_show
-    test = {"parent": "eth01"}
-    test.update(add_params)
 
     return {
         api_call_object.replace('-', '_'): current,
-        "changed": changed,
-        "test": test2
+        "changed": changed
     }
+
+
+def is_delete_requested(module):
+    if "state" not in module.params:
+        return False
+    state = module.params["state"]
+    module.params.pop("state")
+    return state == "absent"
 
 
 def is_change_required(module, api_call_object, keys):
