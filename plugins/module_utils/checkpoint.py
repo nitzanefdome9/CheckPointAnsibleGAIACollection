@@ -165,7 +165,7 @@ def idempotent_api_call(module, api_call_object, ignore, keys):
     }
 
 
-def set_api_call(module, api_call_object, keys, add_params):
+def set_api_call(module, api_call_object, keys, add_params={}):
     changed = False
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
     if is_delete_requested(module=module):

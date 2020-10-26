@@ -130,7 +130,7 @@ def main():
     parent_and_id = module.params["name"].split(".")
     add_params = {"parent": parent_and_id[0], "id": parent_and_id[1]}
 
-    res = set_api_call(module, api_call_object, keys, add_params)
+    res = set_api_call(module=module, api_call_object=api_call_object, keys=keys, add_params=add_params)
     module.exit_json(**res)
 
 
