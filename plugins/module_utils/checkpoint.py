@@ -36,7 +36,6 @@ import ansible.errors
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.connection import Connection
 
-
 checkpoint_argument_spec_for_objects = dict(
     auto_publish_session=dict(type='bool'),
     wait_for_task=dict(type='bool', default=True),
@@ -85,7 +84,8 @@ def get_payload_from_parameters(params):
         if parameter_value is not None and is_checkpoint_param(parameter):
             if isinstance(parameter_value, dict):
                 payload[parameter.replace("_", "-")] = get_payload_from_parameters(parameter_value)
-            elif isinstance(parameter_value, list) and len(parameter_value) != 0 and isinstance(parameter_value[0], dict):
+            elif isinstance(parameter_value, list) and len(parameter_value) != 0 and isinstance(parameter_value[0],
+                                                                                                dict):
                 payload_list = []
                 for element_dict in parameter_value:
                     payload_list.append(get_payload_from_parameters(element_dict))
@@ -173,22 +173,17 @@ def set_api_call(module, api_call_object, keys, add_params):
         api_call(module=module, api_call_object="delete-{0}".format(api_call_object))
         return {}
     modules_params_original = module.params
-    module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
-    module.params = module_params_show
-    test2 = is_object_exists(module=module, api_call_object=api_call_object)
-    if test2:
-        current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
-    else:
+    test2 = is_object_exists(module=module, api_call_object=api_call_object, keys=keys)
+    if not test2:
         module.params = modules_params_original
         current = add_api_call(module=module, api_call_object=api_call_object, keys=keys, add_params=add_params)
-    shared_items = {key: module_params_input[key] for key in module_params_input if key in current and str(module_params_input[key]) == str(current[key])}
-
-    # Run the command:
-    if len(shared_items) < len(module_params_input):
-        module.params = modules_params_original
+    elif is_change_required(module=module, api_call_object=api_call_object, keys=keys):
         current = api_call(module=module, api_call_object="set-{0}".format(api_call_object))
         changed = True
+    else:
+        module.params = module_params_show
+        current = api_call(module=module, api_call_object="show-{0}".format(api_call_object))
 
     module.params = module_params_show
     test = {"parent": "eth01"}
@@ -201,7 +196,7 @@ def set_api_call(module, api_call_object, keys, add_params):
     }
 
 
-def is_change_requierd(module, api_call_object, keys):
+def is_change_required(module, api_call_object, keys):
     modules_params_original = module.params
     module_params_input = dict((k.replace('_', '-'), v) for k, v in module.params.items() if v is not None)
     module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
@@ -246,9 +241,13 @@ def api_call(module, api_call_object):
     return response
 
 
-def is_object_exists(module, api_call_object):
+def is_object_exists(module, api_call_object, keys):
+    modules_params_original = module.params
+    module_params_show = dict((k, v) for k, v in module.params.items() if k in keys and v is not None)
+    module.params = module_params_show
     payload = get_payload_from_parameters(module.params)
     connection = Connection(module._socket_path)
     version = get_version(module)
     code, response = send_request(connection, version, "show-{0}".format(api_call_object), payload)
+    module.params = modules_params_original
     return code == 200
